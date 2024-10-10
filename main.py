@@ -12,7 +12,7 @@ LOCATION = os.getenv("LOCATION")  # Format is 'us' or 'eu'
 PROCESSOR_ID = os.getenv("PROCESSOR_ID")  # Create processor in Cloud Console
 
 # The local file in your current working directory
-FILE_PATH = "pg101.pdf"
+FILE_PATH = "book.pdf"
 # Refer to https://cloud.google.com/document-ai/docs/file-types
 # for supported file types
 MIME_TYPE = "application/pdf"
