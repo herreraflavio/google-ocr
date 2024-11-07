@@ -1,3 +1,6 @@
-\.venv
+.venv
 .env
-\credentials
+credentials
+server/data
+server/node_modules
+expiremental/output/output

@@ -1,18 +1,25 @@
 import os
 from dotenv import load_dotenv
+from pathlib import Path
 
 from google.api_core.client_options import ClientOptions
 from google.cloud import documentai
 
-# Load environment variables from .env file
-load_dotenv()
+# Clear existing environment variables that might be cached
+for key in list(os.environ.keys()):
+    if key.startswith("PROJECT") or key.startswith("LOCATION") or key.startswith("PROCESSOR"):
+        os.environ.pop(key)
+
+# Reload the .env file explicitly
+env_path = Path(__file__).parent / '.env'
+load_dotenv(dotenv_path=env_path)
 
 PROJECT_ID = os.getenv("PROJECT_ID")
 LOCATION = os.getenv("LOCATION")  # Format is 'us' or 'eu'
 PROCESSOR_ID = os.getenv("PROCESSOR_ID")  # Create processor in Cloud Console
 
 # The local file in your current working directory
-FILE_PATH = "book.pdf"
+FILE_PATH = "pg101.pdf"
 # Refer to https://cloud.google.com/document-ai/docs/file-types
 # for supported file types
 MIME_TYPE = "application/pdf"

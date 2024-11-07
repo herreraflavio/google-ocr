@@ -18,12 +18,19 @@ from google.cloud import storage
 # Load environment variables from .env file
 load_dotenv()
 
-PROJECT_ID = os.getenv("PROJECT_ID")
-LOCATION = os.getenv("LOCATION")  # Format is 'us' or 'eu'
-PROCESSOR_ID = os.getenv("PROCESSOR_ID")  # Create processor in Cloud Console
+# PROJECT_ID = os.getenv("PROJECT_ID")
+# LOCATION = os.getenv("LOCATION")  # Format is 'us' or 'eu'
+# PROCESSOR_ID = os.getenv("PROCESSOR_ID")  # Create processor in Cloud Console
 
-GCS_OUTPUT_URI = os.getenv("GCS_BATCH_OUTPUT_URI")
-GCS_INPUT_URI = os.getenv("GCS_BATCH_INPUT_URI")
+# GCS_OUTPUT_URI = os.getenv("GCS_BATCH_OUTPUT_URI")
+# GCS_INPUT_URI = os.getenv("GCS_BATCH_INPUT_URI")
+PROJECT_ID = "437973525643"
+LOCATION = "us"  # Format is 'us' or 'eu'
+PROCESSOR_ID = "822f416532363e58"  # Create processor in Cloud Console
+
+GCS_OUTPUT_URI = "gs://testbucketarpa/output/batch"
+GCS_INPUT_URI = "gs://testbucketarpa/batch"
+
 
 # TODO(developer): Fill these variables before running the sample.
 project_id = PROJECT_ID

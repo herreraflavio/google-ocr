@@ -5,6 +5,7 @@ Makes a Batch Processing Request to Document AI
 import re
 import os
 from dotenv import load_dotenv
+from pathlib import Path
 
 
 from google.api_core.client_options import ClientOptions
@@ -13,8 +14,25 @@ from google.api_core.exceptions import RetryError
 from google.cloud import documentai
 from google.cloud import storage
 
-# Load environment variables from .env file
-load_dotenv()
+# # Load environment variables from .env file
+# load_dotenv()
+# Clear environment variables for the specific keys
+os.environ.pop("PROJECT_ID", None)
+os.environ.pop("GCS_OUTPUT_URI", None)
+os.environ.pop("GCS_INPUT_URI", None)
+# Clear existing environment variables that might be cached
+for key in list(os.environ.keys()):
+    if key.startswith("PROJECT") or key.startswith("LOCATION") or key.startswith("PROCESSOR"):
+        os.environ.pop(key)
+
+# Reload the .env file explicitly
+env_path = Path(__file__).parent / '.env'
+load_dotenv(dotenv_path=env_path)
+
+for key, value in os.environ.items():
+    if key.startswith("GCS"):
+        print(f"{key}={value}")
+
 
 PROJECT_ID = os.getenv("PROJECT_ID")
 LOCATION = os.getenv("LOCATION")  # Format is 'us' or 'eu'
@@ -22,6 +40,11 @@ PROCESSOR_ID = os.getenv("PROCESSOR_ID")  # Create processor in Cloud Console
 
 GCS_OUTPUT_URI = os.getenv("GCS_OUTPUT_URI")
 GCS_INPUT_URI = os.getenv("GCS_INPUT_URI")
+
+print("=======================")
+print(PROJECT_ID)
+print(GCS_OUTPUT_URI)
+print(GCS_INPUT_URI)
 
 # TODO(developer): Fill these variables before running the sample.
 project_id = PROJECT_ID
