@@ -28,8 +28,8 @@ PROJECT_ID = "437973525643"
 LOCATION = "us"  # Format is 'us' or 'eu'
 PROCESSOR_ID = "822f416532363e58"  # Create processor in Cloud Console
 
-GCS_OUTPUT_URI = "gs://testbucketarpa/output/test_batch"
-GCS_INPUT_URI = "gs://testbucketarpa/test_batch"
+GCS_OUTPUT_URI = "gs://testbucketarpa/arpa-orders-output"
+GCS_INPUT_URI = "gs://testbucketarpa/arpa-orders"
 
 
 # TODO(developer): Fill these variables before running the sample.
@@ -46,6 +46,13 @@ gcs_input_uri = GCS_INPUT_URI  # Format: `gs://bucket/directory/file.pdf` or `gs
 input_mime_type = "application/pdf"
 field_mask = "text,entities,pages.pageNumber"  # Optional. The fields to return in the Document object.
 
+# Ensure the logs directory exists
+os.makedirs("./logs", exist_ok=True)
+
+# Function to write errors to log file
+def log_error(message):
+    with open("./logs/errors.txt", "a") as error_file:
+        error_file.write(message + "\n")
 
 def batch_process_documents(
     project_id: str,
@@ -56,7 +63,7 @@ def batch_process_documents(
     processor_version_id: str = None,
     input_mime_type: str = None,
     field_mask: str = None,
-    timeout: int = 1000,
+    timeout: int = 3600,
 ):
     # You must set the api_endpoint if you use a location other than "us".
     opts = ClientOptions(api_endpoint=f"{location}-documentai.googleapis.com")
@@ -113,6 +120,7 @@ def batch_process_documents(
     # Catch exception when operation doesn"t finish before timeout
     except (RetryError, InternalServerError) as e:
         print(e.message)
+        log_error(e.message)  # Log error to file
 
     # NOTE: Can also use callbacks for asynchronous processing
     #
@@ -126,6 +134,8 @@ def batch_process_documents(
     metadata = documentai.BatchProcessMetadata(operation.metadata)
 
     if metadata.state != documentai.BatchProcessMetadata.State.SUCCEEDED:
+        error_message = f"Batch Process Failed:  {metadata.state_message}"
+        log_error(error_message)
         raise ValueError(f"Batch Process Failed: {metadata.state_message}")
 
     storage_client = storage.Client()
@@ -137,10 +147,11 @@ def batch_process_documents(
         # The Cloud Storage API requires the bucket name and URI prefix separately
         matches = re.match(r"gs://(.*?)/(.*)", process.output_gcs_destination)
         if not matches:
+            error_message = f"Could not parse output GCS destination: { process.output_gcs_destination}"
             print(
-                "Could not parse output GCS destination:",
-                process.output_gcs_destination,
+              error_message
             )
+            log_error(error_message)
             continue
 
         output_bucket, output_prefix = matches.groups()
@@ -152,9 +163,11 @@ def batch_process_documents(
         for blob in output_blobs:
             # Document AI should only output JSON files to GCS
             if blob.content_type != "application/json":
+                warning_message =f"Skipping non-supported file: {blob.name} - Mimetype: {blob.content_type}"
                 print(
-                    f"Skipping non-supported file: {blob.name} - Mimetype: {blob.content_type}"
+                  warning_message
                 )
+                log_error(warning_message)  # Log error to file
                 continue
 
             # Download JSON File as bytes object and convert to Document Object
@@ -173,23 +186,73 @@ def batch_process_documents(
             print(document.text[:100])
 
 
+# if __name__ == "__main__":
+#     # Define multiple input URIs to process concurrently
+
+#     input_uris = [f"{GCS_INPUT_URI}/{i}" for i in range(1, 6)]  # List of input files for 5 batch requests
+#     output_uris = [f"{GCS_OUTPUT_URI}/{i}" for i in range(1, 6)]  # List of output files for 5 batch requests
+#     log_error("error logs will go here: ")
+#     for uri in input_uris:
+#         print(f"Input URI: {uri}")
+#     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+
+#         # Start the load operations and mark each future with its URL
+#         future_to_uri = {executor.submit(batch_process_documents, PROJECT_ID, LOCATION, PROCESSOR_ID, uri, output_uri): uri for uri, output_uri in zip(input_uris, output_uris)}
+
+#         for future in concurrent.futures.as_completed(future_to_uri):
+#             uri = future_to_uri[future]
+#             try:
+#                 future.result()
+#                 print(f"Processing completed for {uri}")
+#             except Exception as exc:
+#                 error_message = f"Processing failed for {uri} with exception: {exc}"
+#                 print(error_message)
+#                 log_error(error_message)  # Log error to file
+
 if __name__ == "__main__":
-    # Define multiple input URIs to process concurrently
-
-    input_uris = [f"{GCS_INPUT_URI}/{i}" for i in range(1, 6)]  # List of input files for 5 batch requests
-    output_uris = [f"{GCS_OUTPUT_URI}/{i}" for i in range(1, 6)]  # List of output files for 5 batch requests
-
+    # Generate 20 input and output URIs for batches
+    input_uris = [f"{GCS_INPUT_URI}/batch_{i}" for i in range(1, 21)]
+    output_uris = [f"{GCS_OUTPUT_URI}/batch_{i}" for i in range(1, 21)]
+    
+    log_error("error logs will go here: ")
+    
+    # Print all input URIs for reference
     for uri in input_uris:
         print(f"Input URI: {uri}")
+    
+    # Use ThreadPoolExecutor with max_workers=5 to keep 5 batches processing at a time
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        future_to_uri = {}  # Track futures and their associated URIs
+        uri_index = 0  # Index for tracking which batch to start next
 
-        # Start the load operations and mark each future with its URL
-        future_to_uri = {executor.submit(batch_process_documents, PROJECT_ID, LOCATION, PROCESSOR_ID, uri, output_uri): uri for uri, output_uri in zip(input_uris, output_uris)}
+        # Start initial 5 batches
+        for _ in range(5):
+            future = executor.submit(
+                batch_process_documents, PROJECT_ID, LOCATION, PROCESSOR_ID,
+                input_uris[uri_index], output_uris[uri_index]
+            )
+            future_to_uri[future] = input_uris[uri_index]
+            uri_index += 1
+        
+        # As each batch completes, start a new one until we reach 20 batches
+        while future_to_uri:
+            # As each future completes, process it and start a new batch if available
+            for future in concurrent.futures.as_completed(future_to_uri):
+                uri = future_to_uri.pop(future)  # Remove the completed future
 
-        for future in concurrent.futures.as_completed(future_to_uri):
-            uri = future_to_uri[future]
-            try:
-                future.result()
-                print(f"Processing completed for {uri}")
-            except Exception as exc:
-                print(f"Processing failed for {uri} with exception: {exc}")
+                try:
+                    future.result()
+                    print(f"Processing completed for {uri}")
+                except Exception as exc:
+                    error_message = f"Processing failed for {uri} with exception: {exc}"
+                    print(error_message)
+                    log_error(error_message)  # Log error to file
+
+                # Start the next batch if available
+                if uri_index < len(input_uris):
+                    next_future = executor.submit(
+                        batch_process_documents, PROJECT_ID, LOCATION, PROCESSOR_ID,
+                        input_uris[uri_index], output_uris[uri_index]
+                    )
+                    future_to_uri[next_future] = input_uris[uri_index]
+                    uri_index += 1
