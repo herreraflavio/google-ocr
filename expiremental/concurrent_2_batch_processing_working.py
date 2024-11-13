@@ -1,5 +1,6 @@
 import concurrent.futures
 import urllib.request
+import re
 
 """
 Makes a Batch Processing Request to Document AI
@@ -140,48 +141,112 @@ def batch_process_documents(
 
     storage_client = storage.Client()
 
+    # print("Output files:")
+    # # One process per Input Document
+    # for process in list(metadata.individual_process_statuses):
+    #     # output_gcs_destination format: gs://BUCKET/PREFIX/OPERATION_NUMBER/INPUT_FILE_NUMBER/
+    #     # The Cloud Storage API requires the bucket name and URI prefix separately
+    #     matches = re.match(r"gs://(.*?)/(.*)", process.output_gcs_destination)
+    #     if not matches:
+    #         error_message = f"Could not parse output GCS destination: { process.output_gcs_destination}"
+    #         print(
+    #           error_message
+    #         )
+    #         log_error(error_message)
+    #         continue
+
+    #     output_bucket, output_prefix = matches.groups()
+
+    #     # Get List of Document Objects from the Output Bucket
+    #     output_blobs = storage_client.list_blobs(output_bucket, prefix=output_prefix)
+
+    #     # Document AI may output multiple JSON files per source file
+    #     for blob in output_blobs:
+    #         # Document AI should only output JSON files to GCS
+    #         if blob.content_type != "application/json":
+    #             warning_message =f"Skipping non-supported file: {blob.name} - Mimetype: {blob.content_type}"
+    #             print(
+    #               warning_message
+    #             )
+    #             log_error(warning_message)  # Log error to file
+    #             continue
+
+    #         # Download JSON File as bytes object and convert to Document Object
+    #         print(f"Fetching {blob.name}")
+    #         document = documentai.Document.from_json(
+    #             blob.download_as_bytes(), ignore_unknown_fields=True
+    #         )
+
+    #         # For a full list of Document object attributes, please reference this page:
+    #         # https://cloud.google.com/python/docs/reference/documentai/latest/google.cloud.documentai_v1.types.Document
+
+    #         # Read the text recognition output from the processor
+    #         # print("The document contains the following text:")
+    #         # print(document.text)
+    #         print("The document has been processed")
+    #         print(document.text[:100])
+
+    # Improved function to handle logging of errors
+    def log_error(message):
+        with open("./logs/errors.txt", "a") as error_file:
+            error_file.write(message + "\n")
+
     print("Output files:")
-    # One process per Input Document
+    # Process each input document's output GCS destination
     for process in list(metadata.individual_process_statuses):
-        # output_gcs_destination format: gs://BUCKET/PREFIX/OPERATION_NUMBER/INPUT_FILE_NUMBER/
-        # The Cloud Storage API requires the bucket name and URI prefix separately
-        matches = re.match(r"gs://(.*?)/(.*)", process.output_gcs_destination)
+        # Expect format: gs://BUCKET/PREFIX/OPERATION_NUMBER/INPUT_FILE_NUMBER/
+        output_gcs_destination = process.output_gcs_destination
+        # Updated regex to ensure we have a bucket and path, handling optional trailing slash
+        matches = re.match(r"^gs://([^/]+)/(.*)$", output_gcs_destination)
+
         if not matches:
-            error_message = f"Could not parse output GCS destination: { process.output_gcs_destination}"
-            print(
-              error_message
-            )
+            # Detailed error handling for different scenarios
+            if not output_gcs_destination:
+                error_message = "Output GCS destination is missing or empty."
+            elif not output_gcs_destination.startswith("gs://"):
+                error_message = f"Invalid URI format, expected 'gs://': {output_gcs_destination}"
+            elif output_gcs_destination.count('/') < 2:
+                error_message = (
+                    f"Incomplete URI. Expected format 'gs://bucket/path', got: {output_gcs_destination}"
+                )
+            else:
+                error_message = f"Could not parse output GCS destination: {output_gcs_destination}"
+
+            print(error_message)
             log_error(error_message)
             continue
 
+        # Extract bucket and prefix from regex match
         output_bucket, output_prefix = matches.groups()
 
-        # Get List of Document Objects from the Output Bucket
-        output_blobs = storage_client.list_blobs(output_bucket, prefix=output_prefix)
+        # Log the parsed bucket and prefix for verification
+        print(f"Parsed output bucket: {output_bucket}, prefix: {output_prefix}")
 
-        # Document AI may output multiple JSON files per source file
+        # Get list of Document objects from the Output Bucket
+        try:
+            output_blobs = storage_client.list_blobs(output_bucket, prefix=output_prefix)
+        except Exception as e:
+            error_message = f"Error accessing bucket '{output_bucket}' with prefix '{output_prefix}': {str(e)}"
+            print(error_message)
+            log_error(error_message)
+            continue
+
+        # Process each blob in the output
         for blob in output_blobs:
-            # Document AI should only output JSON files to GCS
+            # Only process JSON files
             if blob.content_type != "application/json":
-                warning_message =f"Skipping non-supported file: {blob.name} - Mimetype: {blob.content_type}"
-                print(
-                  warning_message
-                )
-                log_error(warning_message)  # Log error to file
+                warning_message = f"Skipping non-supported file: {blob.name} - Mimetype: {blob.content_type}"
+                print(warning_message)
+                log_error(warning_message)
                 continue
 
-            # Download JSON File as bytes object and convert to Document Object
+            # Fetch and process JSON content
             print(f"Fetching {blob.name}")
             document = documentai.Document.from_json(
                 blob.download_as_bytes(), ignore_unknown_fields=True
             )
 
-            # For a full list of Document object attributes, please reference this page:
-            # https://cloud.google.com/python/docs/reference/documentai/latest/google.cloud.documentai_v1.types.Document
-
-            # Read the text recognition output from the processor
-            # print("The document contains the following text:")
-            # print(document.text)
+            # Display partial text for confirmation
             print("The document has been processed")
             print(document.text[:100])
 
@@ -211,8 +276,8 @@ def batch_process_documents(
 
 if __name__ == "__main__":
     # Generate 20 input and output URIs for batches
-    input_uris = [f"{GCS_INPUT_URI}/batch_{i}" for i in range(1, 21)]
-    output_uris = [f"{GCS_OUTPUT_URI}/batch_{i}" for i in range(1, 21)]
+    input_uris = [f"{GCS_INPUT_URI}/batch_{i}/" for i in range(7, 12)]
+    output_uris = [f"{GCS_OUTPUT_URI}/batch_{i}/" for i in range(7, 12)]
     
     log_error("error logs will go here: ")
     
