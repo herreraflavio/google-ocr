@@ -419,8 +419,8 @@ def batch_process_documents(
 
 if __name__ == "__main__":
     # Generate 20 input and output URIs for batches
-    input_uris = [f"{GCS_INPUT_URI}/batch_{i}/" for i in range(41, 76)]
-    output_uris = [f"{GCS_OUTPUT_URI}/batch_{i}/" for i in range(41, 76)]
+    input_uris = [f"{GCS_INPUT_URI}/batch_{i}/" for i in range(76, 78)]
+    output_uris = [f"{GCS_OUTPUT_URI}/batch_{i}/" for i in range(76, 78)]
     
     log_error("error logs will go here: ")
     
@@ -429,12 +429,12 @@ if __name__ == "__main__":
         print(f"Input URI: {uri}")
     
     # Use ThreadPoolExecutor with max_workers=5 to keep 5 batches processing at a time
-    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
         future_to_uri = {}  # Track futures and their associated URIs
         uri_index = 0  # Index for tracking which batch to start next
 
         # Start initial 5 batches
-        for _ in range(4):
+        for _ in range(2):
             future = executor.submit(
                 batch_process_documents, PROJECT_ID, LOCATION, PROCESSOR_ID,
                 input_uris[uri_index], output_uris[uri_index]
