@@ -55,6 +55,17 @@ def log_error(message):
     with open("./logs/errors.txt", "a") as error_file:
         error_file.write(message + "\n")
 
+# def batch_process_documents(
+#     project_id: str,
+#     location: str,
+#     processor_id: str,
+#     gcs_input_uri: str,
+#     gcs_output_uri: str,
+#     processor_version_id: str = None,
+#     input_mime_type: str = None,
+#     field_mask: str = None,
+#     timeout: int = 3600,
+# ):
 def batch_process_documents(
     project_id: str,
     location: str,
@@ -63,7 +74,7 @@ def batch_process_documents(
     gcs_output_uri: str,
     processor_version_id: str = None,
     input_mime_type: str = None,
-    field_mask: str = None,
+    field_mask: str = "text,pages.pageNumber",
     timeout: int = 3600,
 ):
     # You must set the api_endpoint if you use a location other than "us".
@@ -419,8 +430,8 @@ def batch_process_documents(
 
 if __name__ == "__main__":
     # Generate 20 input and output URIs for batches
-    input_uris = [f"{GCS_INPUT_URI}/batch_{i}/" for i in range(76, 78)]
-    output_uris = [f"{GCS_OUTPUT_URI}/batch_{i}/" for i in range(76, 78)]
+    input_uris = [f"{GCS_INPUT_URI}/batch_{i}/" for i in range(78, 79)]
+    output_uris = [f"{GCS_OUTPUT_URI}/batch_{i}/" for i in range(78, 79)]
     
     log_error("error logs will go here: ")
     

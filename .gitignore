@@ -6,3 +6,5 @@ server/node_modules
 expiremental/output/output
 batch_0_copy_of_batch_1
 batch_1
+concatenate/processed_pdfs
+concatenate/outputDirectory
