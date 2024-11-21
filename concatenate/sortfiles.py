@@ -29,20 +29,26 @@ def read_json_from_gcs_and_save(bucket_name, file_path, output_txt_file):
 
     # Read the content of the blob as a string
     json_data = blob.download_as_text()
+
     # Ensure the directory exists
     print(output_txt_file)
- # Create the folder
     os.makedirs(output_txt_file, exist_ok=True)
 
     # Save the JSON content to a text file
     print(new_file_path)
-    with open(new_file_path, "w", encoding="utf-8") as json_file:
-        json.dump(json_data, json_file, indent=4)
+    try:
+        # Parse the JSON string into a Python dictionary
+        parsed_data = json.loads(json_data)
 
+        # Save the dictionary as JSON to the file
+        with open(new_file_path, "w", encoding="utf-8") as json_file:
+            json.dump(parsed_data, json_file, indent=4)
+    except json.JSONDecodeError as e:
+        print(f"Failed to decode JSON from file {file_path}: {e}")
 
     end_time = time.time()  # End timing
     elapsed_time_ms = (end_time - start_time) * 1000  # Convert to milliseconds
-    print(f"JSON content saved to {output_txt_file}")
+    print(f"JSON content saved to {new_file_path}")
     print(f"Time taken: {elapsed_time_ms:.2f} ms")
 
 # Usage example
