@@ -60,27 +60,30 @@ try:
     
     with open(file_path_name, 'r') as file:
         for i, line in enumerate(file):
-            if i >= 100:  # Stop after reading 100 lines
+            if i >= 19000:  # Stop after reading 100 lines
                 break
+            if i > 300:
+                file_path = line.strip()
+                split_items_list = line.split("/")
+                if split_items_list[2].strip() != ".gitkeep":
+                    # split_items_name_list = split_items_list[4].split("-")
+                    # result = "-".join(split_items_name_list[:7]) 
+                    
+                    result = split_items_list[4].strip()
+                    # print(result)
+                    #output_directory = os.path.join("outputDirectory", result)
+                    
+                    # print(split_items_name_list[0])
+                    
+                    split_items_name_list = result.split("-")
+                    output_result = "-".join(split_items_name_list[:7]) 
 
-            file_path = line.strip()
-            split_items_list = line.split("/")
-            # split_items_name_list = split_items_list[4].split("-")
-            # result = "-".join(split_items_name_list[:7]) 
-            
-            result = split_items_list[4].strip()
-            # print(result)
-            #output_directory = os.path.join("outputDirectory", result)
-            
-            # print(split_items_name_list[0])
-            
-            split_items_name_list = result.split("-")
-            output_result = "-".join(split_items_name_list[:7]) 
-
-            output_json_file = os.path.join(output_directory, output_result)
-            #print(file_path)
-            #print(output_json_file)
-            read_json_from_gcs_and_save(bucket_name, file_path, output_json_file)
+                    output_json_file = os.path.join(output_directory, output_result)
+                    #print(file_path)
+                    #print(output_json_file)
+                    read_json_from_gcs_and_save(bucket_name, file_path, output_json_file)
+                else:
+                    print("================.gitkeep file encountered================")
 
 except FileNotFoundError:
     print(f"The file at '{file_path_name}' was not found.")
