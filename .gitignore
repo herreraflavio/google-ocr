@@ -9,6 +9,8 @@ batch_1
 concatenate/processed_pdfs
 concatenate/outputDirectory
 concatenate/outputDirectory_extracted
+concatenate/outputDirectory_test
+concatenate/outputDirectory_extracted_test
 concatenate/outputDirectory_extracted_copy
 concatenate/outputpdfs
 batch_46
