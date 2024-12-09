@@ -15,3 +15,6 @@ concatenate/outputDirectory_extracted_copy
 concatenate/outputpdfs
 batch_46
 concatenate/outputpdfs/
+concatenate/outputjson/
+concatenate/outputjson_fitz/
+concatenate/outputtxt_fitz
