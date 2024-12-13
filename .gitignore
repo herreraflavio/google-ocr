@@ -18,3 +18,6 @@ concatenate/outputpdfs/
 concatenate/outputjson/
 concatenate/outputjson_fitz/
 concatenate/outputtxt_fitz
+move_txt_files/arpa-orders
+move_txt_files/arpa-orders-txts
+move_txt_files/txts
